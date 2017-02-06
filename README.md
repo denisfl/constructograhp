@@ -1,6 +1,5 @@
-# vue-chart
+# constructograhp
 
-> A Vue.js project
 
 ## Build Setup
 
