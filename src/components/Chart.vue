@@ -1,44 +1,23 @@
 <template>
-<canvas width="400" height="400"></canvas>
+  <canvas width="400" height="400"></canvas>
 </template>
 
 <script>
-import Colors from './Colors';
 import ChartJS from 'chart.js';
+import Moment from 'moment';
 
-const respond = {
-  "values": [{
-      "identifier": "water",
-      "value": "240",
-      "relatedTo": {
-        "type": "day_time",
-        "value": "midnight"
-      }
-    },
-    {
-      "identifier": "coffee",
-      "value": "200",
-      "relatedTo": {
-        "type": "time_range",
-        "value": "18:00-21:00"
-      }
-    },
-    {
-      "identifier": "juce",
-      "value": "100",
-      "relatedTo": {
-        "type": "time_range",
-        "value": "18:00-21:00"
-      }
-    },
-  ]
-}
+import Colors from './Colors';
+import Store from './Store';
+
+const apiUrl = 'https://anltcs.herokuapp.com/sleepTime/fetch/awake_asleep'
 
 export default {
   name: 'Chart',
   data() {
     return {
-      data: {}
+      data: {
+        items: null,
+      },
     }
   },
   created() {
@@ -51,19 +30,27 @@ export default {
   methods: {
     createChart($el) {
       this.chart = new ChartJS($el, {
-        type: 'pie',
-        data: this.data,
+        type: 'line',
+        data: this.data.items,
       })
       this.chart
     },
-    getData() {
-      return respond["values"]
-    },
     buildChartData() {
       let result = {}
+      let data = Store.fetch(apiUrl)
+      // let labelsArr = this.mapData(data, 'relatedTo.value')
+      // let dataArr = this.mapData(data, 'value')
 
-      let labelsArr = this.mapData('identifier')
-      let dataArr = this.mapData('value')
+      let labelsArr = data.map(function(i) {
+        // return i.relatedTo.value
+        return Moment.unix(i.relatedTo.value).format("MM/DD/YYYY")
+      })
+      let dataArr = data.map(function(i) {
+        return {
+                  x: Moment.unix(i.relatedTo.value).format("h:mm"),
+                  y: Moment.unix(i.relatedTo.value).format("MM/DD/YYYY")
+                }
+      });
 
       result = {
         labels: labelsArr,
@@ -73,16 +60,13 @@ export default {
           backgroundColor: Colors.get(labelsArr.length, 90),
         }],
       }
-
-      this.data = result
+      this.data.items = result
     },
-    mapData(param) {
+    mapData(data, param) {
       let result = []
-      let data = this.getData()
-
       result = data.map(function(i) {
-        return i[param]
-      });
+        return i.param
+      })
       return result
     },
     getColors(count) {
