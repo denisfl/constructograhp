@@ -9,7 +9,7 @@ import Moment from 'moment';
 import Colors from './Colors';
 import Store from './Store';
 
-const apiUrl = 'https://anltcs.herokuapp.com/sleepTime/fetch/awake_asleep'
+const apiUrl = 'https://anltcs.herokuapp.com/sleepTime/fetch/awake_asleep?sort=relatedTo.value*a&limit=800&offset=60'
 
 export default {
   name: 'Chart',
@@ -32,33 +32,64 @@ export default {
       this.chart = new ChartJS($el, {
         type: 'line',
         data: this.data.items,
+        options: {
+            scales: {
+                yAxes: [{
+                    scaleLabel: {
+                      display: true,
+                      labelString: 'time'
+                    },
+                    ticks2: {
+                      min: 0,
+                      max: 24 * 60,
+                      stepSize: 60
+                    }
+                }]
+            }
+        }
       })
       this.chart
     },
     buildChartData() {
       let result = {}
       let data = Store.fetch(apiUrl)
-      // let labelsArr = this.mapData(data, 'relatedTo.value')
-      // let dataArr = this.mapData(data, 'value')
 
-      let labelsArr = data.map(function(i) {
-        // return i.relatedTo.value
+      let labelsArr = data.filter(function(i){ return i.value == "asleep" }).map(function(i) {
         return Moment.unix(i.relatedTo.value).format("MM/DD/YYYY")
       })
-      let dataArr = data.map(function(i) {
-        return {
-                  x: Moment.unix(i.relatedTo.value).format("h:mm"),
-                  y: Moment.unix(i.relatedTo.value).format("MM/DD/YYYY")
-                }
-      });
 
+      var timeLabels = []
+      var times = 24 * 60;
+      for(var i=0; i < times; i++){
+          timeLabels.push(Moment.unix(i*60).format("hh:mm"))
+      }
+
+      let dataMap = function(i) {
+        return {
+                  x: Moment.unix(i.relatedTo.value).format("MM/DD/YYYY"),
+                  y: Moment.unix(i.relatedTo.value).hours() * 60 + Moment.unix(i.relatedTo.value).minutes(),
+                }
+      }
+
+      let asleepDataArr = data.filter(function(i){ return i.value == "asleep" }).map(dataMap);
+      let awakeDataArr = data.filter(function(i){ return i.value == "awake" }).map(dataMap);
+      console.log(timeLabels)
       result = {
-        labels: labelsArr,
+        yLabels: timeLabels,
+        xLabels: labelsArr,
         datasets: [{
-          data: dataArr,
-          label: "Dataset",
-          backgroundColor: Colors.get(labelsArr.length, 90),
-        }],
+          data: asleepDataArr,
+          label: "Fall asleep",
+          borderColor: '#9C27B0',
+          fill: false,
+        },
+        {
+          data: awakeDataArr,
+          label: "Wake up",
+          borderColor: '#CDDC39',
+          fill: false,
+        }
+        ],
       }
       this.data.items = result
     },
